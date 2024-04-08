@@ -5,7 +5,7 @@ import glob
 import time
 import requests
 
-host = "http://localhost:7860"
+host = "http://127.0.0.1:7860"
 PROJECT_DIR = os.getcwd()
 OUTPUT_DIR = f"{PROJECT_DIR}\images"
 
