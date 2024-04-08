@@ -12,7 +12,6 @@ OUTPUT_DIR = f"{PROJECT_DIR}\images"
 with open(f"{PROJECT_DIR}\config.json", 'r', encoding='utf-8') as f:
     CONFIG_JSON = json.load(f)
 
-SD_PATH = CONFIG_JSON.get('sd_path')
 CONTROL_NODE = CONFIG_JSON.get('control_node_url')
 
 progress = 0
@@ -113,9 +112,10 @@ def check_progress(task):
 
             if new_progress > progress:
                 print('growth')
+                counter = 3
                 send_signal(task_id, f'IN_PROGRESS')
 
-            elif new_progress < progress:
+            elif new_progress < progress or (new_progress == progress == 0):
                 print('send res')
                 files = glob.glob(f'{PROJECT_DIR}/images/*.jpg')
                 if files:
@@ -123,21 +123,20 @@ def check_progress(task):
                     with open(file, 'rb') as img:
                         r = send_result(task_id, img.read())
 
+                        clear_images()
+
                         print(r.json())
 
                         if not r.json():
+                            print(r.content)
                             counter -= 1
                         elif r.json()['status'] != 200:
+                            print(r.json())
                             counter -= 1
-
-                        clear_images()
-                        print('SEND WOOHOO')
-                        break
+                        else:
+                            print('SEND WOOHOO')
                 else:
                     counter -= 1
-
-            elif new_progress == progress == 0:
-                counter -= 3
 
             time.sleep(1)
         except Exception as e:
