@@ -104,6 +104,8 @@ def check_progress(task):
 
     counter = 3
 
+    success = False
+
     while counter:
         try:
             response = requests.get(f"{host}/sdapi/v1/progress?skip_current_image=false")
@@ -134,7 +136,9 @@ def check_progress(task):
                             print(r.json())
                             counter -= 1
                         else:
+                            success = True
                             print('SEND WOOHOO')
+                            break
                 else:
                     counter -= 1
 
@@ -142,6 +146,9 @@ def check_progress(task):
         except Exception as e:
             print('ERROR', str(e))
             counter -= 1
+
+    if success:
+        return
 
     if not counter:
         print(f'error task {task_id}')
