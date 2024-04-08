@@ -1,6 +1,6 @@
 {
-  "gpu_id": 2,
-  "secret_key": "davidseks",
-  "control_node_url": "https://ws1.meyapir.ru/control-node",
+  "gpu_id": 0,
+  "secret_key": "",
+  "control_node_url": "",
   "sd_path": ""
 }
