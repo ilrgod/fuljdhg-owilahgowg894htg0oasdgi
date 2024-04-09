@@ -145,6 +145,8 @@ def check_progress(task):
                 else:
                     counter -= 1
 
+            progress = float(new_progress)
+            
             time.sleep(1)
         except Exception as e:
             print('ERROR IN GET PROGRESS WHILE LOOP', str(e))
