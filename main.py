@@ -5,7 +5,7 @@ import glob
 import time
 import requests
 
-host = "http://127.0.0.1:7860"
+host = "http://localhost:7860"
 PROJECT_DIR = os.getcwd()
 OUTPUT_DIR = f"{PROJECT_DIR}\images"
 
@@ -111,6 +111,7 @@ def check_progress(task):
             response = requests.get(f"{host}/sdapi/v1/progress?skip_current_image=false")
 
             new_progress = response.json().get('progress') or 0
+            print(progress, '->', new_progress)
 
             if new_progress > progress:
                 print('growth')
@@ -141,6 +142,8 @@ def check_progress(task):
                             break
                 else:
                     counter -= 1
+
+            progress = float(new_progress)
 
             time.sleep(1)
         except Exception as e:
