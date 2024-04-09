@@ -145,10 +145,11 @@ def check_progress(task):
 
             progress = float(new_progress)
 
-            time.sleep(1)
         except Exception as e:
             print('ERROR', str(e))
             counter -= 1
+
+        time.sleep(1)
 
     if success:
         return
