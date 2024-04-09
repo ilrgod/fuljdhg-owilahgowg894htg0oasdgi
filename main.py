@@ -5,18 +5,19 @@ import glob
 import time
 import requests
 
-host = "http://localhost:7860"
+host = "http://127.0.0.1:7860"
 PROJECT_DIR = os.getcwd()
-OUTPUT_DIR = f"{PROJECT_DIR}\images"
+OUTPUT_DIR = f"{PROJECT_DIR}\\images"
 
-with open(f"{PROJECT_DIR}\config.json", 'r', encoding='utf-8') as f:
+with open(f"{PROJECT_DIR}\\config.json", 'r', encoding='utf-8') as f:
     CONFIG_JSON = json.load(f)
 
 CONTROL_NODE = CONFIG_JSON.get('control_node_url')
 
 progress = 0
 
-requests.post(f'{host}/sdapi/v1/options', json={'samples_filename_pattern': '', 'directories_filename_pattern': 'images',
+requests.post(f'{host}/sdapi/v1/options',
+              json={'samples_filename_pattern': '', 'directories_filename_pattern': 'images',
                     'outdir_img2img_samples': PROJECT_DIR, 'save_to_dirs': True, 'samples_format': 'jpg'})
 
 
@@ -38,9 +39,11 @@ def get_task():
     response = requests.get(f"{CONTROL_NODE}/get_task", params=data)
     j = response.json()
     if j['status'] == 200:
-        print(j['task']['task_id'])
+        print("*"*30)
+        print(f"GET NEW TASK COMPLETE. ID: {j['task']['task_id']}")
     else:
-        print('ass')
+        print("*"*30)
+        print(f'ERROR GET NEW TASK. CODE: {j["status"]}')
     return response
 
 
@@ -52,7 +55,7 @@ def send_signal(task_id, status: str):
         secret_key=CONFIG_JSON.get('secret_key')
     )
     response = requests.post(f"{CONTROL_NODE}/send_signal", data=data)
-    print(f'signal sent {status}')
+    print(f'COMPLETE SEND PROGRESS SIGNAL. CODE: {status}')
     return response
 
 
@@ -65,8 +68,7 @@ def send_result(task_id, image_data: bytes):
         secret_key=CONFIG_JSON.get('secret_key')
     )
     response = requests.post(f"{CONTROL_NODE}/send_result", data=data)
-    print(response.content)
-    print('result sent')
+    print(f'COMPLETE SEND RESULT. ID: {task_id}\nSERVER RESPONSE: {response.content}')
     return response
 
 
@@ -92,7 +94,7 @@ def post_image(task):
     except requests.exceptions.RequestException as e:
         pass
     except Exception as e:
-        print('ERROR', str(e))
+        print('ERROR SET UP TASK TO IMG2IMG', str(e))
 
     send_signal(task_id, 'IN_PROGRESS')
 
@@ -111,15 +113,14 @@ def check_progress(task):
             response = requests.get(f"{host}/sdapi/v1/progress?skip_current_image=false")
 
             new_progress = response.json().get('progress') or 0
-            print(progress, '->', new_progress)
 
             if new_progress > progress:
-                print('growth')
+                print('PROGRESS GROWTH')
                 counter = 3
-                send_signal(task_id, f'IN_PROGRESS')
+                send_signal(task_id, 'IN_PROGRESS')
 
             elif new_progress < progress or (new_progress == progress == 0):
-                print('send res')
+                print('TRY SENDING RESULT')
                 files = glob.glob(f'{PROJECT_DIR}/images/*.jpg')
                 if files:
                     file = files[0]
@@ -138,24 +139,22 @@ def check_progress(task):
                             counter -= 1
                         else:
                             success = True
-                            print('SEND WOOHOO')
+                            print('!COMPLETE SEND RESULT!')
+                            print("*"*30)
                             break
                 else:
                     counter -= 1
 
-            progress = float(new_progress)
-
+            time.sleep(1)
         except Exception as e:
-            print('ERROR', str(e))
+            print('ERROR IN GET PROGRESS WHILE LOOP', str(e))
             counter -= 1
-
-        time.sleep(1)
 
     if success:
         return
 
     if not counter:
-        print(f'error task {task_id}')
+        print(f'ERROR IN TASK. ID: {task_id}')
         send_signal(task_id, 'ERROR')
 
     progress = 0
@@ -172,15 +171,15 @@ def main():
 
             task = response.json()['task']
 
-            print('start post')
+            print('START SETUP TASK TO IMG2IMG')
             post_image(task)
             time.sleep(1)
-            print('start check progress')
+            print('START CHECKING TASK PROGRESS')
             check_progress(task)
-            print('end check progress')
+            print('END CHECKING TASK PROGRESS')
 
         except Exception as e:
-            print(str(e))
+            print(f'ERROR IN MAIN LOOP: {str(e)}')
 
-
-main()
+if __name__ == '__main__':
+    main()
