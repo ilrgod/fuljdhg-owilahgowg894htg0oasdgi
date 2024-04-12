@@ -15,11 +15,16 @@ with open(f"{PROJECT_DIR}\\config.json", 'r', encoding='utf-8') as f:
 CONTROL_NODE = CONFIG_JSON.get('control_node_url')
 
 progress = 0
-
-requests.post(f'{host}/sdapi/v1/options',
-              json={'samples_filename_pattern': '', 'directories_filename_pattern': 'images',
-                    'outdir_img2img_samples': PROJECT_DIR, 'save_to_dirs': True, 'samples_format': 'jpg'})
-
+response = None
+while not response:
+    try:
+        response = requests.post(f'{host}/sdapi/v1/options',
+                      json={'samples_filename_pattern': '', 'directories_filename_pattern': 'images',
+                            'outdir_img2img_samples': PROJECT_DIR, 'save_to_dirs': True, 'samples_format': 'jpg'})
+    except Exception as e:
+        print("ERROR IN SET OPTIONS. RETRY...")
+        time.spleep(2)
+    
 
 def clear_images():
     for file in glob.glob(f'{PROJECT_DIR}/images/*.jpg'):
@@ -84,7 +89,10 @@ def post_image(task):
             "mask": task["mask"],
             "sampler_index": "DPM++ 2M Karras",
             "force_task_id": task_id,
-            "save_images": True
+            "save_images": True,
+            "override_settings": {
+                "sd_model_checkpoint": "Reliberate_v3-inpainting"
+            }
             }
 
     clear_images()
@@ -163,6 +171,7 @@ def check_progress(task):
 
 
 def main():
+    clear_images()
     while True:
         try:
             response = get_task()
