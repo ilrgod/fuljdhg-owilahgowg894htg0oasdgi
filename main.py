@@ -23,7 +23,7 @@ while not response:
                             'outdir_img2img_samples': PROJECT_DIR, 'save_to_dirs': True, 'samples_format': 'jpg'})
     except Exception as e:
         print("ERROR IN SET OPTIONS. RETRY...")
-        time.spleep(2)
+        time.sleep(2)
     
 
 def clear_images():
