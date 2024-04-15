@@ -102,12 +102,13 @@ def post_image(task):
 
     try:
         print(requests.post(f"{host}/sdapi/v1/img2img", json=data, timeout=1).json())
+        send_signal(task_id, 'IN_PROGRESS')
+        return True
     except requests.exceptions.RequestException as e:
-        pass
+        return True
     except Exception as e:
         print('ERROR SET UP TASK TO IMG2IMG', str(e))
-
-    send_signal(task_id, 'IN_PROGRESS')
+        return False
 
 
 def check_progress(task):
@@ -200,11 +201,12 @@ def main():
             task = response.json()['task']
 
             print('START SETUP TASK TO IMG2IMG')
-            post_image(task)
+            post_status = post_image(task)
             time.sleep(1)
-            print('START CHECKING TASK PROGRESS')
-            check_progress(task)
-            print('END CHECKING TASK PROGRESS')
+            if post_status:
+                print('START CHECKING TASK PROGRESS')
+                check_progress(task)
+                print('END CHECKING TASK PROGRESS')
 
         except Exception as e:
             print(f'ERROR IN MAIN LOOP: {str(e)}')
