@@ -4,6 +4,8 @@ import os
 import glob
 import time
 import requests
+from requests.exceptions import ConnectionError
+
 
 host = "http://127.0.0.1:7860"
 PROJECT_DIR = os.getcwd()
@@ -116,6 +118,7 @@ def check_progress(task):
     counter = 3
 
     success = False
+    connection_error = False
 
     while counter:
         try:
@@ -158,12 +161,19 @@ def check_progress(task):
             progress = float(new_progress)
 
             time.sleep(1)
+        except ConnectionError:
+            connection_error = True
+            break
+
         except Exception as e:
             print('ERROR IN GET PROGRESS WHILE LOOP', str(e))
             counter -= 1
 
     if success:
         return
+    elif connection_error:
+        print("CONNECTION ERROR. SD NOT WORKING.")
+        print("PLEASE RUN STABLE DIFFUSION")
 
     if not counter:
         print(f'ERROR IN TASK. ID: {task_id}')
@@ -175,6 +185,11 @@ def check_progress(task):
 def main():
     clear_images()
     while True:
+        try:
+            requests.post(f"{host}/")
+        except Exception as e:
+            print(f'SD CONNECTION ERROR: {e}')
+            continue
         try:
             response = get_task()
             while response.json()['status'] != 200:
