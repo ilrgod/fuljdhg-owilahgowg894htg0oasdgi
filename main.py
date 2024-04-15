@@ -19,12 +19,13 @@ response = None
 while not response:
     try:
         response = requests.post(f'{host}/sdapi/v1/options',
-                      json={'samples_filename_pattern': '', 'directories_filename_pattern': 'images',
-                            'outdir_img2img_samples': PROJECT_DIR, 'save_to_dirs': True, 'samples_format': 'jpg'})
+                                 json={'samples_filename_pattern': '', 'directories_filename_pattern': 'images',
+                                       'outdir_img2img_samples': PROJECT_DIR, 'save_to_dirs': True,
+                                       'samples_format': 'jpg'})
     except Exception as e:
         print("ERROR IN SET OPTIONS. RETRY...")
         time.sleep(2)
-    
+
 
 def clear_images():
     for file in glob.glob(f'{PROJECT_DIR}/images/*.jpg'):
@@ -44,10 +45,10 @@ def get_task():
     response = requests.get(f"{CONTROL_NODE}/get_task", params=data)
     j = response.json()
     if j['status'] == 200:
-        print("*"*30)
+        print("*" * 30)
         print(f"GET NEW TASK COMPLETE. ID: {j['task']['task_id']}")
     else:
-        print("*"*30)
+        print("*" * 30)
         print(f'ERROR GET NEW TASK. CODE: {j["status"]}')
     return response
 
@@ -87,7 +88,7 @@ def post_image(task):
             "init_images": [task["image"]],
             "inpaint_full_res_padding": 32,
             "mask": task["mask"],
-            "sampler_index": "DPM++ 2M Karras",
+            "sampler_index": "DPM++ 2M SDE",
             "force_task_id": task_id,
             "save_images": True,
             "override_settings": {
@@ -98,7 +99,7 @@ def post_image(task):
     clear_images()
 
     try:
-        requests.post(f"{host}/sdapi/v1/img2img", json=data, timeout=1)
+        print(requests.post(f"{host}/sdapi/v1/img2img", json=data, timeout=1).json())
     except requests.exceptions.RequestException as e:
         pass
     except Exception as e:
@@ -128,11 +129,12 @@ def check_progress(task):
                 send_signal(task_id, 'IN_PROGRESS')
 
             elif new_progress < progress or (new_progress == progress == 0):
-                print('TRY SENDING RESULT')
+                print("PROGRESS NOT GROWTH")
                 files = glob.glob(f'{PROJECT_DIR}/images/*.jpg')
                 if files:
                     file = files[0]
                     with open(file, 'rb') as img:
+                        print('TRY SENDING RESULT')
                         r = send_result(task_id, img.read())
 
                         clear_images()
@@ -148,13 +150,13 @@ def check_progress(task):
                         else:
                             success = True
                             print('!COMPLETE SEND RESULT!')
-                            print("*"*30)
+                            print("*" * 30)
                             break
                 else:
                     counter -= 1
 
             progress = float(new_progress)
-            
+
             time.sleep(1)
         except Exception as e:
             print('ERROR IN GET PROGRESS WHILE LOOP', str(e))
@@ -191,6 +193,7 @@ def main():
 
         except Exception as e:
             print(f'ERROR IN MAIN LOOP: {str(e)}')
+
 
 if __name__ == '__main__':
     main()
