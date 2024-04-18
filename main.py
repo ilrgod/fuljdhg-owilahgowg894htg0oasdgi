@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import shutil
 import glob
 import time
 import requests
@@ -21,8 +22,8 @@ response = None
 while not response:
     try:
         response = requests.post(f'{host}/sdapi/v1/options',
-                                 json={'samples_filename_pattern': '', 'directories_filename_pattern': 'images',
-                                       'outdir_img2img_samples': PROJECT_DIR, 'save_to_dirs': True,
+                                 json={'samples_filename_pattern': '',
+                                       'outdir_img2img_samples': f'{PROJECT_DIR}\\images', 'save_to_dirs': True,
                                        'samples_format': 'jpg'})
     except Exception as e:
         print("ERROR IN SET OPTIONS. RETRY...")
@@ -30,13 +31,14 @@ while not response:
 
 
 def clear_images():
-    for file in glob.glob(f'{PROJECT_DIR}/images/*.jpg'):
-        for i in range(3):
-            try:
-                os.remove(file)
-                break
-            except:
-                pass
+    for folder in os.listdir(f'{PROJECT_DIR}/images'):
+        if folder != '.gitsave':
+            for i in range(3):
+                try:
+                    shutil.rmtree(f'{PROJECT_DIR}/images/{folder}')
+                    break
+                except:
+                    pass
 
 
 def get_task():
@@ -82,6 +84,11 @@ def send_result(task_id, image_data: bytes):
 
 def post_image(task):
     task_id = task['task_id']
+    save_settings = {
+        'directories_filename_pattern': str(task_id),
+        'save_to_dirs': True,
+        'samples_format': 'jpg'
+    }
     data = {"prompt": task["prompts"][0],
             "negative_prompt": task["prompts"][1],
             "cfg_scale": 6.5,
@@ -94,7 +101,8 @@ def post_image(task):
             "force_task_id": task_id,
             "save_images": True,
             "override_settings": {
-                "sd_model_checkpoint": "Reliberate_v3-inpainting"
+                "sd_model_checkpoint": "Reliberate_v3-inpainting",
+                **save_settings
             }
             }
 
@@ -134,7 +142,7 @@ def check_progress(task):
 
             elif new_progress < progress or (new_progress == progress == 0):
                 print("PROGRESS NOT GROWTH")
-                files = glob.glob(f'{PROJECT_DIR}/images/*.jpg')
+                files = glob.glob(f'{PROJECT_DIR}/images/{str(task_id)}/*.jpg')
                 if files:
                     file = files[0]
                     with open(file, 'rb') as img:
@@ -184,8 +192,9 @@ def check_progress(task):
 
 
 def main():
-    clear_images()
     while True:
+        clear_images()
+        
         try:
             requests.post(f"{host}/")
         except Exception as e:
@@ -210,6 +219,8 @@ def main():
 
         except Exception as e:
             print(f'ERROR IN MAIN LOOP: {str(e)}')
+            
+        clear_images()
 
 
 if __name__ == '__main__':
