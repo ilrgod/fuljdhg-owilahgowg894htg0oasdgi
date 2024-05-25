@@ -29,6 +29,7 @@ while not response:
         print("ERROR IN SET OPTIONS. RETRY...")
         time.sleep(2)
 
+time.sleep(30)
 
 def clear_images():
     for folder in os.listdir(f'{PROJECT_DIR}/images'):
