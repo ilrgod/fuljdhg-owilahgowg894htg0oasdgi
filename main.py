@@ -117,7 +117,6 @@ def send_signal(task_id, status: str):
 def send_result(task_id, image_data: bytes):
     file_id = drive_manager.upload_photo(f'photo_{random.randint(0, 100000000)}.jpg', image_data, 'image/jpeg')
     link = drive_manager.get_photo_link(file_id)
-    print(link)
     data = dict(
         task_id=task_id,
         image_link=link,
