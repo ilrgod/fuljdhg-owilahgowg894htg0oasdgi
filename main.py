@@ -54,11 +54,10 @@ from gdata import GoogleDriveManager
 
 if not os.path.exists('cred_file.json'):
     gcf = get_cred_file()
-    if gcf:
-        drive_manager = GoogleDriveManager('cred_file.json')
-
-    else:
+    if not gcf:
         exit(1)
+
+drive_manager = GoogleDriveManager('cred_file.json')
 
 progress = 0
 response = None
