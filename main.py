@@ -1,12 +1,28 @@
-import base64
+import glob
 import json
 import os
+import random
 import shutil
-import glob
+import subprocess
+import sys
 import time
+
 import requests
 from requests.exceptions import ConnectionError
 
+
+def install_packages():
+    packages = [
+        'google-auth',
+        'google-auth-oauthlib',
+        'google-auth-httplib2',
+        'google-api-python-client',
+    ]
+    for package in packages:
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
+
+
+install_packages()
 
 host = "http://127.0.0.1:7860"
 PROJECT_DIR = os.getcwd()
@@ -16,6 +32,33 @@ with open(f"{PROJECT_DIR}\\config.json", 'r', encoding='utf-8') as f:
     CONFIG_JSON = json.load(f)
 
 CONTROL_NODE = CONFIG_JSON.get('control_node_url')
+
+
+def get_cred_file():
+    data = dict(
+        gpu_id=CONFIG_JSON.get('gpu_id'),
+        secret_key=CONFIG_JSON.get('secret_key')
+    )
+    response = requests.get(f"{CONTROL_NODE}/get_cred_file", params=data)
+    r = response.json()
+    if r['status'] == 200:
+        with open("cred_file.json", 'w') as f:
+            f.write(str(r['cred_file']).replace('\'', '\"'))
+        print("GET CRED FILE COMPLETE")
+        return True
+    else:
+        return False
+
+
+from gdata import GoogleDriveManager
+
+if not os.path.exists('cred_file.json'):
+    gcf = get_cred_file()
+    if gcf:
+        drive_manager = GoogleDriveManager('cred_file.json')
+
+    else:
+        exit(1)
 
 progress = 0
 response = None
@@ -28,6 +71,7 @@ while not response:
     except Exception as e:
         print("ERROR IN SET OPTIONS. RETRY...")
         time.sleep(2)
+
 
 time.sleep(30)
 
@@ -71,10 +115,12 @@ def send_signal(task_id, status: str):
 
 
 def send_result(task_id, image_data: bytes):
-    image_data_base64 = base64.b64encode(image_data).decode('utf-8')
+    file_id = drive_manager.upload_photo(f'photo_{random.randint(0, 100000000)}.jpg', image_data, 'image/jpeg')
+    link = drive_manager.get_photo_link(file_id)
+    print(link)
     data = dict(
         task_id=task_id,
-        image=image_data_base64,
+        image_link=link,
         gpu_id=CONFIG_JSON.get('gpu_id'),
         secret_key=CONFIG_JSON.get('secret_key')
     )
@@ -195,7 +241,7 @@ def check_progress(task):
 def main():
     while True:
         clear_images()
-        
+
         try:
             requests.post(f"{host}/")
         except Exception as e:
@@ -220,7 +266,7 @@ def main():
 
         except Exception as e:
             print(f'ERROR IN MAIN LOOP: {str(e)}')
-            
+
         clear_images()
 
 
