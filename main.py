@@ -57,7 +57,7 @@ if not os.path.exists('cred_file_2.json'):
     if not gcf:
         exit(1)
 
-drive_manager = GoogleDriveManager('cred_file.json')
+drive_manager = GoogleDriveManager('cred_file_2.json')
 
 progress = 0
 response = None
