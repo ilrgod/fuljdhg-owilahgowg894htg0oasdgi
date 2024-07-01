@@ -138,7 +138,7 @@ def post_image(task):
             "negative_prompt": task["prompts"][1],
             "cfg_scale": 6.5,
             "denoising_strength": 1,
-            "steps": 35,
+            "steps": 30,
             "init_images": [task["image"]],
             "inpaint_full_res_padding": 32,
             "mask": task["mask"],
