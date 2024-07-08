@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import time
+from types import NoneType
 
 import requests
 from requests.exceptions import ConnectionError
@@ -32,6 +33,132 @@ with open(f"{PROJECT_DIR}\\config.json", 'r', encoding='utf-8') as f:
     CONFIG_JSON = json.load(f)
 
 CONTROL_NODE = CONFIG_JSON.get('control_node_url')
+
+
+def get_lora_folder():
+    try:
+        response = requests.get(f'{host}/sdapi/v1/sd-models')
+        r = response.json()
+
+        return (r[0]['filename'].split('models')[0] + 'models\Lora')
+    except Exception as e:
+        print(f'ERROR IN GET LORA FOLDER: {e}')
+
+        return None
+
+
+def get_required_loras():
+    try:
+        data = dict(
+            gpu_id=CONFIG_JSON.get('gpu_id'),
+            secret_key=CONFIG_JSON.get('secret_key')
+        )
+
+        response = requests.get(f'{CONTROL_NODE}/get_loras', params=data)
+
+        return response.json()['loras']
+    except Exception as e:
+        print(f'ERROR IN GET REQUIRED LORAS: {e}')
+
+        return None
+
+
+def download_lora(lora_name):
+    try:
+        lora_folder = get_lora_folder()
+
+        if not lora_folder:
+            print(f'Lora folder not found')
+            return False
+
+        data = dict(
+            gpu_id=CONFIG_JSON.get('gpu_id'),
+            secret_key=CONFIG_JSON.get('secret_key'),
+            filename=lora_name
+        )
+
+        response = requests.get(f'{CONTROL_NODE}/download_lora', params=data,
+                                stream=True)
+        response.raise_for_status()
+
+        file_path = f'{lora_folder}/{lora_name}.safetensors'
+
+        with open(file_path, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    file.write(chunk)
+
+        print(f'File downloaded')
+        return True
+
+    except Exception as e:
+        print(f'Error in downloading lora: {e}')
+        return False
+
+
+def get_downloaded_loras():
+    try:
+        response = requests.get(f'{host}/sdapi/v1/loras')
+        r = response.json()
+
+        return [lora["name"] for lora in r]
+    except Exception as e:
+        print(f'ERROR IN GET LORAS: {e}')
+
+        return None
+
+
+def get_missing_loras():
+    required_loras = get_required_loras()
+
+    if not required_loras:
+        return []
+
+    downloaded_loras = get_downloaded_loras()
+
+    if not downloaded_loras:
+        return None
+
+    missing_loras = [lora for lora in required_loras if lora not in downloaded_loras]
+
+    return missing_loras
+
+
+def refresh_loras():
+    r = requests.post(f'{host}/sdapi/v1/refresh-loras')
+
+
+def download_missing_loras():
+    missing_loras = get_missing_loras()
+
+    if isinstance(missing_loras, NoneType):
+        print('GET MISSING LORAS ERROR')
+    elif missing_loras == []:
+        print('NO MISSING LORAS')
+    else:
+        print(f'MISSING LORAS: {len(missing_loras)}')
+
+    for lora in missing_loras:
+        status = download_lora(lora)
+        if not status:
+            break
+    else:
+        refresh_loras()
+        return True
+
+    return False
+
+
+def loras_checks():
+    refresh_loras()
+
+    print('CHECKING LORAS')
+
+    success = download_missing_loras()
+
+    refresh_loras()
+
+    return success
 
 
 def get_cred_file():
@@ -248,9 +375,16 @@ def main():
         try:
             response = get_task()
             while response.json()['status'] != 200:
-                print(response.json()['message'])
-                response = get_task()
-                time.sleep(0.5)
+                success = loras_checks()
+
+                if success:
+                    print(response.json()['message'])
+                    response = get_task()
+                    time.sleep(0.5)
+                else:
+                    print('UNABLE TO UPDATE LORAS')
+                    time.sleep(0.5)
+                    continue
 
             task = response.json()['task']
 
