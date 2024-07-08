@@ -373,14 +373,16 @@ def main():
             print(f'SD CONNECTION ERROR: {e}')
             continue
         try:
-            response = get_task()
-            while response.json()['status'] != 200:
+            while True:
                 success = loras_checks()
 
                 if success:
-                    print(response.json()['message'])
                     response = get_task()
+                    print(response.json()['message'])
+
                     time.sleep(0.5)
+                    if response.json()['status'] == 200:
+                        break
                 else:
                     print('UNABLE TO UPDATE LORAS')
                     time.sleep(0.5)
