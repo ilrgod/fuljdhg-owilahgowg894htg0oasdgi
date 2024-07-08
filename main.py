@@ -378,11 +378,12 @@ def main():
 
                 if success:
                     response = get_task()
-                    print(response.json()['message'])
 
                     time.sleep(0.5)
                     if response.json()['status'] == 200:
                         break
+                    else:
+                        print(response.json()['message'])
                 else:
                     print('UNABLE TO UPDATE LORAS')
                     time.sleep(0.5)
