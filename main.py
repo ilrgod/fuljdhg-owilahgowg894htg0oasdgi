@@ -169,7 +169,7 @@ def get_cred_file():
     response = requests.get(f"{CONTROL_NODE}/get_cred_file", params=data)
     r = response.json()
     if r['status'] == 200:
-        with open("cred_file_4.json", 'w') as f:
+        with open("cred_file_5.json", 'w') as f:
             f.write(str(r['cred_file']).replace('\'', '\"'))
         print("GET CRED FILE COMPLETE")
         return True
@@ -179,12 +179,12 @@ def get_cred_file():
 
 from gdata import GoogleDriveManager
 
-if not os.path.exists('cred_file_4.json'):
+if not os.path.exists('cred_file_5.json'):
     gcf = get_cred_file()
     if not gcf:
         exit(1)
 
-drive_manager = GoogleDriveManager('cred_file_4.json')
+drive_manager = GoogleDriveManager('cred_file_5.json')
 
 progress = 0
 response = None
