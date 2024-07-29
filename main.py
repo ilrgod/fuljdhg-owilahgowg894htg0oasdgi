@@ -1,6 +1,8 @@
+import base64
 import glob
 import json
 import os
+from dotenv import load_dotenv
 import random
 import shutil
 import subprocess
@@ -8,22 +10,11 @@ import sys
 import time
 from types import NoneType
 
+load_dotenv()
+
 import requests
 from requests.exceptions import ConnectionError
 
-
-def install_packages():
-    packages = [
-        'google-auth',
-        'google-auth-oauthlib',
-        'google-auth-httplib2',
-        'google-api-python-client',
-    ]
-    for package in packages:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
-
-
-install_packages()
 
 host = "http://127.0.0.1:7860"
 PROJECT_DIR = os.getcwd()
@@ -33,6 +24,45 @@ with open(f"{PROJECT_DIR}\\config.json", 'r', encoding='utf-8') as f:
     CONFIG_JSON = json.load(f)
 
 CONTROL_NODE = CONFIG_JSON.get('control_node_url')
+FS_HOST = os.environ.get('FS_HOST')
+print(FS_HOST)
+
+
+def add_file(filename, image_bytes, folder, mime_type='image/jpeg'):
+    files = {
+        'file_content': (filename, image_bytes, mime_type)
+    }
+
+    # Other form fields
+    data = {
+        'folder': folder,
+        'filename': filename
+    }
+
+    retry = 5
+
+    while retry:
+        r = requests.post(f'{FS_HOST}/upload', data=data, files=files)
+
+        if r.json().get('url'):
+            image_url = r.json().get('url')
+            return image_url
+
+        retry -= 1
+
+    if not retry:
+        return None
+
+
+def image_url_to_base64(image_url: str) -> str:
+    # Fetch the image from the URL
+    response = requests.get(image_url)
+    response.raise_for_status()  # Ensure the request was successful
+
+    # Encode the image content to base64
+    image_base64 = base64.b64encode(response.content).decode('utf-8')
+
+    return image_base64
 
 
 def get_lora_folder():
@@ -161,31 +191,6 @@ def loras_checks():
     return success
 
 
-def get_cred_file():
-    data = dict(
-        gpu_id=CONFIG_JSON.get('gpu_id'),
-        secret_key=CONFIG_JSON.get('secret_key')
-    )
-    response = requests.get(f"{CONTROL_NODE}/get_cred_file", params=data)
-    r = response.json()
-    if r['status'] == 200:
-        with open("cred_file_5.json", 'w') as f:
-            f.write(str(r['cred_file']).replace('\'', '\"'))
-        print("GET CRED FILE COMPLETE")
-        return True
-    else:
-        return False
-
-
-from gdata import GoogleDriveManager
-
-if not os.path.exists('cred_file_5.json'):
-    gcf = get_cred_file()
-    if not gcf:
-        exit(1)
-
-drive_manager = GoogleDriveManager('cred_file_5.json')
-
 progress = 0
 response = None
 while not response:
@@ -199,7 +204,7 @@ while not response:
         time.sleep(2)
 
 
-time.sleep(30)
+#time.sleep(30)
 
 def clear_images():
     for folder in os.listdir(f'{PROJECT_DIR}/images'):
@@ -240,22 +245,31 @@ def send_signal(task_id, status: str):
     return response
 
 
-def send_result(task_id, image_data: bytes):
-    file_id = drive_manager.upload_photo(f'photo_{random.randint(0, 100000000)}.jpg', image_data, 'image/jpeg')
-    link = drive_manager.get_photo_link(file_id)
+def send_result(task_id, image_data: bytes, filename):
+    link = add_file(filename, image_data, 'ddcn_results')
+
+    print(link)
+
     data = dict(
         task_id=task_id,
         image_link=link,
         gpu_id=CONFIG_JSON.get('gpu_id'),
         secret_key=CONFIG_JSON.get('secret_key')
     )
+
     response = requests.post(f"{CONTROL_NODE}/send_result", data=data)
+
     print(f'COMPLETE SEND RESULT. ID: {task_id}\nSERVER RESPONSE: {response.content}')
+
     return response
 
 
 def post_image(task):
     task_id = task['task_id']
+
+    b64_image = image_url_to_base64(task["image_url"])
+    b64_mask = image_url_to_base64(task["mask_url"])
+
     save_settings = {
         'directories_filename_pattern': str(task_id),
         'save_to_dirs': True,
@@ -266,9 +280,9 @@ def post_image(task):
             "cfg_scale": 6.5,
             "denoising_strength": 1,
             "steps": 30,
-            "init_images": [task["image"]],
+            "init_images": [b64_image],
             "inpaint_full_res_padding": 32,
-            "mask": task["mask"],
+            "mask": b64_mask,
             "sampler_index": "DPM++ 2M SDE",
             "force_task_id": task_id,
             "save_images": True,
@@ -319,7 +333,7 @@ def check_progress(task):
                     file = files[0]
                     with open(file, 'rb') as img:
                         print('TRY SENDING RESULT')
-                        r = send_result(task_id, img.read())
+                        r = send_result(task_id, img.read(), f'{str(task_id)}_{round(time.time())}.jpg')
 
                         clear_images()
 
@@ -379,11 +393,11 @@ def main():
                 if success:
                     response = get_task()
 
-                    time.sleep(0.5)
                     if response.json()['status'] == 200:
                         break
                     else:
                         print(response.json()['message'])
+                        time.sleep(0.3)
                 else:
                     print('UNABLE TO UPDATE LORAS')
                     time.sleep(0.5)
@@ -398,9 +412,9 @@ def main():
                 print('START CHECKING TASK PROGRESS')
                 check_progress(task)
                 print('END CHECKING TASK PROGRESS')
-
         except Exception as e:
             print(f'ERROR IN MAIN LOOP: {str(e)}')
+            time.sleep(0.5)
 
         clear_images()
 
