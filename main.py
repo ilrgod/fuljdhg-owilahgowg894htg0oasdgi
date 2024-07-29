@@ -267,6 +267,8 @@ def send_result(task_id, image_data: bytes, filename):
 def post_image(task):
     task_id = task['task_id']
 
+    print(task)
+
     b64_image = image_url_to_base64(task["image_url"])
     b64_mask = image_url_to_base64(task["mask_url"])
 
