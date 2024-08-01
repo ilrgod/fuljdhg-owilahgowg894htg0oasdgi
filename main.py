@@ -24,7 +24,7 @@ with open(f"{PROJECT_DIR}\\config.json", 'r', encoding='utf-8') as f:
     CONFIG_JSON = json.load(f)
 
 CONTROL_NODE = CONFIG_JSON.get('control_node_url')
-FS_HOST = os.environ.get('FS_HOST')
+FS_HOST = "https://file-server.mmp.pw"
 print(FS_HOST)
 
 
