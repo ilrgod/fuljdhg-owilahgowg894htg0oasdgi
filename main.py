@@ -56,8 +56,20 @@ def add_file(filename, image_bytes, folder, mime_type='image/jpeg'):
 
 def image_url_to_base64(image_url: str) -> str:
     # Fetch the image from the URL
-    response = requests.get(image_url)
-    response.raise_for_status()  # Ensure the request was successful
+    retries = 5
+
+    response = None
+
+    while retries:
+        response = requests.get(image_url)
+
+        if response.status_code == 200:
+            break
+
+        retries -= 1
+
+    if not retries:
+        response.raise_for_status()
 
     # Encode the image content to base64
     image_base64 = base64.b64encode(response.content).decode('utf-8')
