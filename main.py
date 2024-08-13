@@ -66,6 +66,8 @@ def image_url_to_base64(image_url: str) -> str:
         if response.status_code == 200:
             break
 
+        time.sleep(3)
+
         retries -= 1
 
     if not retries:
