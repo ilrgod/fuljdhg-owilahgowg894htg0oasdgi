@@ -2,19 +2,16 @@ import base64
 import glob
 import json
 import os
-from dotenv import load_dotenv
-import random
 import shutil
-import subprocess
-import sys
 import time
 from types import NoneType
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
 import requests
 from requests.exceptions import ConnectionError
-
 
 host = "http://127.0.0.1:7860"
 PROJECT_DIR = os.getcwd()
@@ -218,7 +215,7 @@ while not response:
         time.sleep(2)
 
 
-#time.sleep(30)
+# time.sleep(30)
 
 def clear_images():
     for folder in os.listdir(f'{PROJECT_DIR}/images'):
@@ -422,7 +419,12 @@ def main():
             task = response.json()['task']
 
             print('START SETUP TASK TO IMG2IMG')
-            post_status = post_image(task)
+            try:
+                post_status = post_image(task)
+            except Exception as e:
+                print(f'SETUP TASK ERROR: {e}')
+                send_signal(task['task_id'], 'ERROR')
+
             time.sleep(1)
             if post_status:
                 print('START CHECKING TASK PROGRESS')
