@@ -151,14 +151,13 @@ def get_downloaded_loras():
 
 def get_missing_loras():
     required_loras = get_required_loras()
+    print(required_loras)
 
     if not required_loras:
         return []
 
     downloaded_loras = get_downloaded_loras()
-
-    if not downloaded_loras:
-        return None
+    print(downloaded_loras)
 
     missing_loras = [lora for lora in required_loras if lora not in downloaded_loras]
 
