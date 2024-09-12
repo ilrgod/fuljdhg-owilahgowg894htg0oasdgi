@@ -81,7 +81,7 @@ def get_lora_folder():
         response = requests.get(f'{host}/sdapi/v1/sd-models')
         r = response.json()
 
-        return (r[0]['filename'].split('models')[0] + 'models\Lora')
+        return r[0]['filename'].split('models')[0] + "models\\Lora"
     except Exception as e:
         print(f'ERROR IN GET LORA FOLDER: {e}')
 
